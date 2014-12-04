@@ -54,18 +54,23 @@ class TobiiPythonInterface():
         self.eye_tracker = c_void_p(self.dll.tobiigaze_create(self.url, None))
         self.info = TobiiDeviceInfo()
         self.dll.tobiigaze_run_event_loop_on_internal_thread(self.eye_tracker, None, None)
+
+        if DEBUG:
+            print("Connecting...")
+
         self.dll.tobiigaze_connect(self.eye_tracker, byref(self.error_code))  
+        self.dll.tobiigaze_get_device_info(self.eye_tracker, byref(self.info), byref(self.error_code));
+
         if DEBUG:
             print("Init complete, status: %s" % self.error_code.value)
-        self.dll.tobiigaze_get_device_info(self.eye_tracker, byref(self.info), byref(self.error_code));
 
         self.eye_data_left = []
         self.eye_data_right = []
 
 
     def get_gaze_callback(self):
-        #left = self.eye_data_left
-        #right = self.eye_data_right
+        left = self.eye_data_left
+        right = self.eye_data_right
         def func(tobiigaze_gaze_data_ref, tobiigaze_gaze_data_extensions_ref, user_data):
             gazedata = tobiigaze_gaze_data_ref.contents
             print("%20.3f " % (gazedata.timestamp / 1e6), end = "") #in seconds
@@ -78,12 +83,12 @@ class TobiiPythonInterface():
                     gazedata.left.gaze_point_on_display_normalized.y), end="")
                 lefteye = "[ %7.4f , %7.4f ] " % (gazedata.left.gaze_point_on_display_normalized.x, 
                     gazedata.left.gaze_point_on_display_normalized.y) 
-                #left.append(lefteye)
+                left.append(lefteye)
             
             else:
                 print("[ %7s , %7s ] " % ("-", "-"), end="")
                 lefteye = "[ %7s , %7s ] " % ("-", "-")
-                #left.append(lefteye)
+                left.append(lefteye)
                 
             if (gazedata.tracking_status == TOBIIGAZE_TRACKING_STATUS_BOTH_EYES_TRACKED or
                 gazedata.tracking_status == TOBIIGAZE_TRACKING_STATUS_ONLY_RIGHT_EYE_TRACKED or
@@ -92,12 +97,12 @@ class TobiiPythonInterface():
                     gazedata.right.gaze_point_on_display_normalized.y), end="")
                 righteye = "[ %7.4f , %7.4f ] " % (gazedata.right.gaze_point_on_display_normalized.x, 
                     gazedata.right.gaze_point_on_display_normalized.y)
-                #right.append(righteye)
+                right.append(righteye)
             
             else:
                 print("[ %7s , %7s ] " % ("-", "-"), end="")
                 righteye = "[ %7s , %7s ] " % ("-", "-")
-                #right.append(righteye)
+                right.append(righteye)
             
             print("")
             if DEBUG:
@@ -115,7 +120,10 @@ class TobiiPythonInterface():
         start.restype = None
         start.argtypes = (c_void_p, gaze_callback_type, POINTER(c_uint32), c_void_p) 
 
-        start(self.eye_tracker, gaze_callback_type(self.get_gaze_callback()), byref(self.error_code), None)                                                        
+        gaze = gaze_callback_type(self.get_gaze_callback())
+        gaze.restype = None
+        start(self.eye_tracker, gaze, byref(self.error_code), None)                                                        
+        
         if DEBUG:
             print("Start tracking finished, status: %s" % self.error_code.value)
         
