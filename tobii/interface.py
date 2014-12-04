@@ -25,7 +25,17 @@ import sys
 from struct import *
 from ctypes import *
 
-DEBUG = False
+DEBUG = True
+    
+#callback_generator = CFUNCTYPE
+callback_generator = WINFUNCTYPE
+
+# NOTE: First arg is return type, was c_int but the C example returns void
+gaze_callback_type = callback_generator(None, POINTER(TobiiGazeData), 
+                            POINTER(TobiiGazeDataExtensions),
+                            c_void_p)
+
+
 
 class TobiiPythonInterface():
     def __init__(self):
@@ -45,7 +55,8 @@ class TobiiPythonInterface():
         self.info = TobiiDeviceInfo()
         self.dll.tobiigaze_run_event_loop_on_internal_thread(self.eye_tracker, None, None)
         self.dll.tobiigaze_connect(self.eye_tracker, byref(self.error_code))  
-        if DEBUG: print("Init complete, status: %s" % self.error_code.value)
+        if DEBUG:
+            print("Init complete, status: %s" % self.error_code.value)
         self.dll.tobiigaze_get_device_info(self.eye_tracker, byref(self.info), byref(self.error_code));
 
         self.eye_data_left = []
@@ -89,25 +100,24 @@ class TobiiPythonInterface():
                 #right.append(righteye)
             
             print("")
-            if DEBUG: print("Gaze complete, status: %s" % self.error_code.value)
+            if DEBUG:
+                print("Gaze complete, status: %s" % self.error_code.value)
 
         return func
     
 
     def start_tracking(self):
-        #callback_generator = CFUNCTYPE
-        callback_generator = WINFUNCTYPE
-
-        # NOTE: First arg is return type, was c_int but the C example returns void
-        callback_type = callback_generator(None, POINTER(TobiiGazeData), 
-                                    POINTER(TobiiGazeDataExtensions),
-                                    c_void_p)
+        if DEBUG:
+            print("Start tracking, status: %s" % self.error_code.value)
 
         start = self.dll.tobiigaze_start_tracking
-        #start.restype = None
-        #start.argtypes = (c_void_p, callback_type, c_int_p, c_void_p) 
+        start.restype = c_void_p
+        start.restype = None
+        start.argtypes = (c_void_p, gaze_callback_type, POINTER(c_uint32), c_void_p) 
 
-        start(self.eye_tracker, callback_type(self.get_gaze_callback()), byref(self.error_code), None)                                                        
+        start(self.eye_tracker, gaze_callback_type(self.get_gaze_callback()), byref(self.error_code), None)                                                        
+        if DEBUG:
+            print("Start tracking finished, status: %s" % self.error_code.value)
         
     def stop_tracking(self):
         self.dll.tobiigaze_stop_tracking(self.eye_tracker, byref(self.error_code))

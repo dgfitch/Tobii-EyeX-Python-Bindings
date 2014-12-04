@@ -19,7 +19,6 @@ import os
 from tobii import *
 
 tobii = TobiiPythonInterface()
-print("Init complete, status: %s" % tobii.error_code.value)
 
 try:
     tobii.start_tracking()
