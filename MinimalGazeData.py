@@ -2,7 +2,7 @@
 
 #############################################################################
 ##
-## Authors: Tom Vanasse and Nate Vack
+## Authors: Tom Vanasse, Nate Vack, and Dan Fitch
 ##
 ## This program returns gaze data from both eyes for a specified period of 
 ## time.  The gaze Screen coordinates returned are the x and y coordinates, each 
@@ -16,19 +16,20 @@
 
 import time
 import os
-from ctypes import *
+from tobii import *
 
-from tobii_lib import struct
+tobii = TobiiPythonInterface()
+print("Init complete, status: %s" % tobii.error_code.value)
 
-print(os.getcwd())
+try:
+    tobii.start_tracking()
 
-tobiiGazeCore64 = WinDLL(os.getcwd() + '\\tobii_lib\\TobiiGazeCore64.dll');
-struct.start_tracking()
+    time.sleep(3)
 
-#Specify desired time of Gaze Data here
-time.sleep(3)
+    tobii.stop_tracking()
 
-struct.stop_tracking()
+finally:
+    print("Device info status: %s" % tobii.error_code.value)
 
 print("ALL DONE")
 
