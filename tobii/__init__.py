@@ -1,1 +1,2 @@
 from interface import TobiiPythonInterface
+from interfaceasync import TobiiPythonAsyncInterface

@@ -22,10 +22,11 @@ from __future__ import print_function
 import array 
 import os
 import sys 
+import platform
 from struct import *
 from ctypes import *
 
-DEBUG = True
+DEBUG = False
     
 #callback_generator = CFUNCTYPE
 callback_generator = WINFUNCTYPE
@@ -35,25 +36,40 @@ gaze_callback_type = callback_generator(None, POINTER(TobiiGazeData),
                             POINTER(TobiiGazeDataExtensions),
                             c_void_p)
 
+error_callback_type = callback_generator(None, c_uint32, c_void_p)
+
+def error_callback(error_code, user_data):
+    print("ERROR: %s" % error_code.value)
 
 
 class TobiiPythonInterface():
     def __init__(self):
         self.error_code = c_uint32()
 
-        WINDOWS_32BIT = sys.maxint == 2147483647
-        if WINDOWS_32BIT:
-            self.dll = CDLL(os.getcwd() + '\\tobii\\TobiiGazeCore32.dll');
-        else:
-            self.dll = WinDLL(os.getcwd() + '\\tobii\\TobiiGazeCore64.dll');
+        machine = platform.machine()
+        WINDOWS_64BIT = sys.maxsize > 2**32
 
-        url_size = c_uint32(256)
-        self.url = create_string_buffer(256)
+        if WINDOWS_64BIT:
+            self.dll = WinDLL(os.getcwd() + '\\tobii\\TobiiGazeCore64.dll');
+            if DEBUG:
+                print("In 64 bit mode")
+        else:
+            self.dll = WinDLL(os.getcwd() + '\\tobii\\TobiiGazeCore32.dll');
+            print("In 32 bit mode... warning, may explode")
+
+
+        url_size = 256
+        c_url_size = c_uint32(url_size)
+
+        self.url = create_string_buffer(url_size)
         
-        self.dll.tobiigaze_get_connected_eye_tracker(self.url, url_size, None)    
+        self.dll.tobiigaze_get_connected_eye_tracker(self.url, c_url_size, None)
         self.eye_tracker = c_void_p(self.dll.tobiigaze_create(self.url, None))
         self.info = TobiiDeviceInfo()
         self.dll.tobiigaze_run_event_loop_on_internal_thread(self.eye_tracker, None, None)
+
+        # TODO: Attempt to register an error callback
+        #self.dll.tobiigaze_register_error_callback(self.eye_tracker, error_callback_type(error_callback), 0);
 
         if DEBUG:
             print("Connecting...")
@@ -73,6 +89,7 @@ class TobiiPythonInterface():
         right = self.eye_data_right
         def func(tobiigaze_gaze_data_ref, tobiigaze_gaze_data_extensions_ref, user_data):
             gazedata = tobiigaze_gaze_data_ref.contents
+
             print("%20.3f " % (gazedata.timestamp / 1e6), end = "") #in seconds
             print("%d " % gazedata.tracking_status, end = "")
             
@@ -115,14 +132,12 @@ class TobiiPythonInterface():
         if DEBUG:
             print("Start tracking, status: %s" % self.error_code.value)
 
-        start = self.dll.tobiigaze_start_tracking
-        start.restype = c_void_p
-        start.restype = None
-        start.argtypes = (c_void_p, gaze_callback_type, POINTER(c_uint32), c_void_p) 
+        self.gaze_callback = self.get_gaze_callback()
+        self.gaze = gaze_callback_type(self.gaze_callback)
 
-        gaze = gaze_callback_type(self.get_gaze_callback())
-        gaze.restype = None
-        start(self.eye_tracker, gaze, byref(self.error_code), None)                                                        
+        #import pdb; pdb.set_trace()
+
+        self.dll.tobiigaze_start_tracking(self.eye_tracker, self.gaze, byref(self.error_code), None)
         
         if DEBUG:
             print("Start tracking finished, status: %s" % self.error_code.value)

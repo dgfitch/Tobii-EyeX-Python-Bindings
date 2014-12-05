@@ -16,19 +16,18 @@
 
 import time
 import os
+import sys
 from tobii import *
 
 tobii = TobiiPythonInterface()
 
-try:
-    tobii.start_tracking()
 
-    time.sleep(3)
+tobii.start_tracking()
 
-    tobii.stop_tracking()
+time.sleep(20)
 
-finally:
-    print("Device info status: %s" % tobii.error_code.value)
+tobii.stop_tracking()
+
 
 print("ALL DONE")
 

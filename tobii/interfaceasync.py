@@ -6,11 +6,10 @@
 ##
 ## This file provides the c_type python structures necessary to 
 ## run simple funtions with the Tobii Eyex Engine, as well as some basic
-## functions of its own  This file works with the 'TobiiGazeCore64.dll' found 
-## here: http://developer.tobii.com/eyex-sdk/.
+## functions of its own
 ##
 ## TODO:
-##   - Hide more of the innards
+##   - Async mode is a test and is TOTALLY NOT WORKING!
 ##
 ## This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
 ## WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
