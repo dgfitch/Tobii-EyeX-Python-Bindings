@@ -33,9 +33,20 @@ TOBIIGAZE_MAX_GAZE_DATA_EXTENSIONS = 32
 
 class TobiiDeviceInfo(Structure):
     
-    _fields_ =[("serial_number", c_char * 128), ("model", c_char * 64),
-               ("generation", c_char * 64), ("firmware_version", c_char * 128)
-               ]
+    _fields_ =[
+        ("serial_number", c_char * 128),
+        ("model", c_char * 64),
+        ("generation", c_char * 64), ("firmware_version", c_char * 128)
+    ]
+
+class UsbDeviceInfo(Structure):
+    
+    _fields_ =[
+        ("serialNumber", c_char * 128),
+        ("productName", c_char * 128),
+        ("platformType", c_char * 128), 
+        ("firmware_version", c_char * 128)
+    ]
                
 class TobiigazePoint3d(Structure):
     
@@ -72,4 +83,5 @@ class TobiiGazeDataExtensions(Structure):
                  TobiiGazeDataExtension * TOBIIGAZE_MAX_GAZE_DATA_EXTENSIONS), 
                  ("actual_size", c_uint32)
                  ]
+
 

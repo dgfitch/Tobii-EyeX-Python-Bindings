@@ -28,15 +28,6 @@ from ctypes import *
 
 DEBUG = False
     
-#callback_generator = CFUNCTYPE
-callback_generator = WINFUNCTYPE
-
-# NOTE: First arg is return type, was c_int but the C example returns void
-gaze_callback_type = callback_generator(None, POINTER(TobiiGazeData), 
-                            POINTER(TobiiGazeDataExtensions),
-                            c_void_p)
-
-error_callback_type = callback_generator(None, c_uint32, c_void_p)
 
 def error_callback(error_code, user_data):
     print("ERROR: %s" % error_code.value)
@@ -44,32 +35,44 @@ def error_callback(error_code, user_data):
 
 class TobiiPythonInterface():
     def __init__(self):
-        self.error_code = c_uint32()
 
         machine = platform.machine()
         WINDOWS_64BIT = sys.maxsize > 2**32
 
         if WINDOWS_64BIT:
             self.dll = WinDLL(os.getcwd() + '\\tobii\\TobiiGazeCore64.dll');
+            callback_generator = WINFUNCTYPE
             if DEBUG:
                 print("In 64 bit mode")
         else:
-            self.dll = WinDLL(os.getcwd() + '\\tobii\\TobiiGazeCore32.dll');
+            self.dll = CDLL(os.getcwd() + '\\tobii\\TobiiGazeCore32.dll');
+            callback_generator = CFUNCTYPE
             print("In 32 bit mode... warning, may explode")
+
+
+        # NOTE: First arg is return type, was c_int but the C example returns void
+        self.gaze_callback_type = callback_generator(None, POINTER(TobiiGazeData), 
+                                    POINTER(TobiiGazeDataExtensions),
+                                    c_void_p)
+
+        self.error_callback_type = callback_generator(None, c_uint32, c_void_p)
 
 
         url_size = 256
         c_url_size = c_uint32(url_size)
 
         self.url = create_string_buffer(url_size)
-        
+        self.error_code = c_uint32(0)
+
+        self.dll.tobiigaze_get_connected_eye_tracker.argtypes = [c_char_p,c_uint32,POINTER(c_uint32)]
         self.dll.tobiigaze_get_connected_eye_tracker(self.url, c_url_size, None)
+
         self.eye_tracker = c_void_p(self.dll.tobiigaze_create(self.url, None))
         self.info = TobiiDeviceInfo()
         self.dll.tobiigaze_run_event_loop_on_internal_thread(self.eye_tracker, None, None)
 
         # TODO: Attempt to register an error callback
-        #self.dll.tobiigaze_register_error_callback(self.eye_tracker, error_callback_type(error_callback), 0);
+        #self.dll.tobiigaze_register_error_callback(self.eye_tracker, self.error_callback_type(error_callback), 0);
 
         if DEBUG:
             print("Connecting...")
@@ -133,7 +136,7 @@ class TobiiPythonInterface():
             print("Start tracking, status: %s" % self.error_code.value)
 
         self.gaze_callback = self.get_gaze_callback()
-        self.gaze = gaze_callback_type(self.gaze_callback)
+        self.gaze = self.gaze_callback_type(self.gaze_callback)
 
         #import pdb; pdb.set_trace()
 
